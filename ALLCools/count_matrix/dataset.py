@@ -81,8 +81,7 @@ def _determine_datasets(regions, quantifiers, chrom_size_path, tmp_dir):
         name, region_path = pair
         # prepare regions
         if isinstance(region_path, (str, pathlib.Path)) and pathlib.Path(region_path).exists():
-            region_bed_df = pd.read_csv(region_path, sep="\t", header=None)
-            # remove additional chroms that do not occur in chrom_sizes
+            region_bed_df = pd.read_csv(region_path, sep="\t", header=None, dtype = [str, int, int, str, str])            # remove additional chroms that do not occur in chrom_sizes
             region_bed_df = region_bed_df[region_bed_df.iloc[:, 0].isin(chrom_sizes)]
             # sort chroms
             region_bed_df = pybedtools.BedTool.from_dataframe(region_bed_df).sort(g=chrom_size_path).to_dataframe()
