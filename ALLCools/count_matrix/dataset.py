@@ -314,7 +314,7 @@ def generate_dataset(
     # prepare regions and determine quantifiers
     pathlib.Path(output_path).mkdir(exist_ok=True)
     z = zarr.storage.LocalStore(root=output_path)
-    root = zarr.open_group(store=z, mode = 'w')
+    root = zarr.open_group(store=z, mode="w")
     datasets, tmpdir = _determine_datasets(regions, quantifiers, chrom_size_path)
     # copy chrom_size_path to output_path
     subprocess.run(["cp", "-f", chrom_size_path, f"{output_path}/chrom_sizes.txt"], check=True)
