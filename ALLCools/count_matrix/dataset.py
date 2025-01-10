@@ -13,9 +13,8 @@ import xarray as xr
 import zarr
 import zarr.convenience
 import zarr.creation
-import zarr.hierarchy
 import zarr.storage
-from numcodecs import blosc
+from numcodecs import Blosc
 from scipy import stats
 
 from ALLCools.utilities import parse_chrom_size, parse_mc_pattern
@@ -314,8 +313,8 @@ def generate_dataset(
 
     # prepare regions and determine quantifiers
     pathlib.Path(output_path).mkdir(exist_ok=True)
-    z = zarr.storage.DirectoryStore(path=output_path)
-    root = zarr.hierarchy.group(store=z, overwrite=True)
+    z = zarr.storage.LocalStore(root=output_path)
+    root = zarr.open_group(store=z, mode = 'w')
     datasets, tmpdir = _determine_datasets(regions, quantifiers, chrom_size_path)
     # copy chrom_size_path to output_path
     subprocess.run(["cp", "-f", chrom_size_path, f"{output_path}/chrom_sizes.txt"], check=True)
@@ -326,10 +325,10 @@ def generate_dataset(
         bed.columns = [f"{region_dim}_chrom", f"{region_dim}_start", f"{region_dim}_end"]
         bed.index.name = region_dim
         region_size = bed.index.size
-        dsobs = regiongroup.array(
+        dsobs = regiongroup.create_array(
             name=obs_dim, data=allc_table.index.values, chunks=(chunk_size), dtype=f"<U{max_length}"
         )
-        dsobs.attrs["_ARRAY_DIMENSIONS"] = [obs_dim]
+        dsobs.update_attributes({"_ARRAY_DIMENSIONS": obs_dim})
         # append region bed to the saved ds
         ds = xr.Dataset()
         for col, data in bed.items():
@@ -352,11 +351,11 @@ def generate_dataset(
                 chunks=(chunk_size, region_size, len(count_mc_types), 2),
                 dtype="uint32",
             )
-            DA.attrs["_ARRAY_DIMENSIONS"] = [obs_dim, region_dim, "mc_type", "count_type"]
-            count = regiongroup.array(name="count_type", data=(["mc", "cov"]), dtype="<U3")
-            count.attrs["_ARRAY_DIMENSIONS"] = ["count_type"]
-            mc = regiongroup.array(name="mc_type", data=count_mc_types, dtype="<U3")
-            mc.attrs["_ARRAY_DIMENSIONS"] = ["mc_type"]
+            DA.update_attributes({"_ARRAY_DIMENSIONS": (obs_dim, region_dim, "mc_type", "count_type")})
+            count = regiongroup.create_array(name="count_type", data=(["mc", "cov"]), dtype="<U3")
+            count.update_attributes({"_ARRAY_DIMENSIONS": "count_type"})
+            mc = regiongroup.create_array(name="mc_type", data=count_mc_types, dtype="<U3")
+            mc.update_attributes({"_ARRAY_DIMENSIONS": "mc_type"})
         # deal with hypo-score, hyper-score quantifiers
         for quant in region_config["quant"]:
             if quant.quant_type == "hypo-score":
@@ -367,7 +366,7 @@ def generate_dataset(
                         chunks=(chunk_size, region_size),
                         dtype="float16",
                     )
-                    hypo.attrs["_ARRAY_DIMENSIONS"] = [obs_dim, region_dim]
+                    hypo.update_attributes({"_ARRAY_DIMENSIONS": (obs_dim, region_dim)})
             elif quant.quant_type == "hyper-score":
                 for mc_type in quant.mc_types:
                     hyper = regiongroup.empty(
@@ -376,8 +375,8 @@ def generate_dataset(
                         chunks=(chunk_size, region_size),
                         dtype="float16",
                     )
-                    hyper.attrs["_ARRAY_DIMENSIONS"] = [obs_dim, region_dim]
-    blosc.use_threads = False
+                    hyper.update_attributes({"_ARRAY_DIMENSIONS": (obs_dim, region_dim)})
+    Blosc.use_threads = False
     with ProcessPoolExecutor(cpu) as exe:
         futures = {}
         # parallel on allc chunks and region_sets levels
@@ -398,7 +397,7 @@ def generate_dataset(
         for f in as_completed(futures):
             region_dim, i = futures[f]
             print(f"Chunk {i} of {region_dim} returned")
-    blosc.use_threads = None
+    Blosc.use_threads = None
     from ..mcds.utilities import update_dataset_config
 
     update_dataset_config(
