@@ -317,6 +317,7 @@ def generate_dataset(
     # determine index length and str dtype
     max_length = allc_table.index.map(lambda idx: len(idx)).max()
     obs_dim_dtype = f"<U{max_length}"
+    allc_table_index_vals = allc_table.index.values.astype(dtype=obs_dim_dtype)
 
     # determine parallel chunk size
     n_sample = allc_table.size
@@ -365,9 +366,9 @@ def generate_dataset(
                 dtype="uint32",
             )
             DA.update_attributes({"_ARRAY_DIMENSIONS": (obs_dim, region_dim, "mc_type", "count_type")})
-            count = rgs[region_dim].create_array(name="count_type", data=(["mc", "cov"]), dtype="<U3")
+            count = rgs[region_dim].create_array(name="count_type", data=(np.array(object = ["mc", "cov"], dtype="<U3")))
             count.update_attributes({"_ARRAY_DIMENSIONS": "count_type"})
-            mc = rgs[region_dim].create_array(name="mc_type", data=count_mc_types, dtype="<U3")
+            mc = rgs[region_dim].create_array(name="mc_type", data=np.array(count_mc_types, dtype="<U3"))
             mc.update_attributes({"_ARRAY_DIMENSIONS": "mc_type"})
         # deal with hypo-score, hyper-score quantifiers
         for quant in region_config["quant"]:
