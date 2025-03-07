@@ -74,9 +74,8 @@ class _CountQuantifier:
         return mc_type_data
 
 
-def _determine_datasets(regions, quantifiers, chrom_size_path):
+def _determine_datasets(regions, quantifiers, chrom_size_path, tmpdir = tempfile.mkdtemp()):
     """Determine datasets for each region."""
-    tmpdir = tempfile.mkdtemp()
     chrom_sizes = parse_chrom_size(chrom_size_path)
     datasets = {}
     for pair in regions:
