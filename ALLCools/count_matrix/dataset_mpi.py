@@ -1,5 +1,7 @@
 import pathlib
 import subprocess
+
+from mpi4py import MPI
 from mpi4py.futures import MPIPoolExecutor, as_completed
 
 import pandas as pd
@@ -17,7 +19,7 @@ from .._doc import *
 
 
 @doc_params(
-    generate_dataset_mpi_doc=generate_dataset_doc,
+    generate_dataset_doc=generate_dataset_doc,
     allc_table_doc=allc_table_doc,
     chrom_size_path_doc=chrom_size_path_doc,
     regions_doc=generate_dataset_regions_doc,
@@ -135,7 +137,7 @@ def generate_dataset_mpi(
                     )
                     hyper.attrs["_ARRAY_DIMENSIONS"] = [obs_dim, region_dim]
     blosc.use_threads = False
-    with MPIPoolExecutor(cpu) as exe:
+    with MPIPoolExecutor(cpu, main = False) as exe:
         futures = {}
         # parallel on allc chunks and region_sets levels
         for i, chunk_start in enumerate(range(0, n_sample, chunk_size)):
